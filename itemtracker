@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Item Tracker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+        th {
+            background-color: #4CAF50;
+            color: white;
+        }
+        input[type="text"], input[type="password"], input[type="number"] {
+            width: 100px;
+        }
+        button {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Item Tracker</h1>
+
+<div id="loginSection">
+    <h2>User Login</h2>
+    <input type="text" id="loginUsername" placeholder="User Name" required>
+    <input type="password" id="loginPassword" placeholder="Password" required>
+    <button onclick="login()">Login</button>
+    <div id="loginMessage"></div>
+</div>
+
+<div id="dataSection" class="hidden">
+    <h2>Add User Data</h2>
+    <input type="number" id="eggs" placeholder="Eggs" required>
+    <input type="number" id="milk" placeholder="Milk" required>
+    <input type="number" id="livestock" placeholder="Livestock" required>
+    <input type="number" id="payouts" placeholder="Payouts" required>
+    <button onclick="addUserData()">Add Data</button>
+</div>
+
+<h2>User Tally</h2>
+<table id="userTable">
+    <thead>
+        <tr>
+            <th>User</th>
+            <th>Eggs</th>
+            <th>Milk</th>
+            <th>Livestock</th>
+            <th>Payouts</th>
+            <th>Action</th>
+        </tr>
+    </thead>
+    <tbody id="userTbody">
+    </tbody>
+</table>
+
+<h2>Overall Totals</h2>
+<div id="overallTotals"></div>
+
+<h2>Admin Section</h2>
+<div>
+    <input type="text" id="adminUsername" placeholder="Admin Username" required>
+    <input type="password" id="adminPassword" placeholder="Admin Password" required>
+    <button onclick="adminLogin()">Login as Admin</button>
+</div>
+<div id="adminSection" class="hidden">
+    <h3>Delete User Data</h3>
+    <input type="text" id="deleteUsername" placeholder="Username to Delete" required>
+    <button onclick="deleteUser()">Delete User</button>
+    <div id="deleteMessage"></div>
+</div>
+
+<script>
+    let users = {};
+    let loggedInUser = null;
+    const adminCredentials = { username: 'admin', password: 'admin123' }; // Simple admin credentials
+
+    function login() {
+        const username = document.getElementById('loginUsername').value;
+        const password = document.getElementById('loginPassword').value;
+
+        if (!users[username]) {
+            users[username] = { password, data: [] };
+            document.getElementById('loginMessage').innerText = "User created. Please log in.";
+            return;
+        }
+
+        if (users[username].password !== password) {
+            document.getElementById('loginMessage').innerText = "Incorrect password.";
+            return;
+        }
+
+        loggedInUser = username;
+        document.getElementById('loginSection').classList.add('hidden');
+        document.getElementById('dataSection').classList.remove('hidden');
+    }
+
+    function addUserData() {
+        if (!loggedInUser) return;
+
+        const eggs = parseInt(document.getElementById('eggs').value) || 0;
+        const milk = parseInt(document.getElementById('milk').value) || 0;
+        const livestock = parseInt(document.getElementById('livestock').value) || 0;
+        const payouts = parseInt(document.getElementById('payouts').value) || 0;
+
+        const userData = { eggs, milk, livestock, payouts };
+        users[loggedInUser].data.push(userData);
+        displayUserData();
+        calculateOverallTotals();
+        clearInputs();
+    }
+
+    function displayUserData() {
+        const tbody = document.getElementById('userTbody');
+        tbody.innerHTML = '';
+        for (const user in users) {
+            const total = users[user].data.reduce((acc, item) => {
+                acc.eggs += item.eggs;
+                acc.milk += item.milk;
+                acc.livestock += item.livestock;
+                acc.payouts += item.payouts;
+                return acc;
+            }, { eggs: 0, milk: 0, livestock: 0, payouts: 0 });
+
+            const row = `<tr>
+                <td>${user}</td>
+                <td>${total.eggs}</td>
+                <td>${total.milk}</td>
+                <td>${total.livestock}</td>
+                <td>${total.payouts}</td>
+                <td><button onclick="deleteUserData('${user}')">Delete</button></td>
+            </tr>`;
+            tbody.innerHTML += row;
+        }
+    }
+
+    function calculateOverallTotals() {
+        const totals = Object.values(users).reduce((acc, user) => {
+            user.data.forEach(item => {
+                acc.eggs += item.eggs;
+                acc.milk += item.milk;
+                acc.livestock += item.livestock;
+                acc.payouts += item.payouts;
+            });
+            return acc;
+        }, { eggs: 0, milk: 0, livestock: 0, payouts: 0 });
+
+        document.getElementById('overallTotals').innerHTML = `
+            Eggs: ${totals.eggs} <br>
+            Milk: ${totals.milk} <br>
+            Livestock: ${totals.livestock} <br>
+            Payouts: ${totals.payouts}
+        `;
+    }
+
+    function clearInputs() {
+        document.getElementById('eggs').value = '';
+        document.getElementById('milk').value = '';
+        document.getElementById('livestock').value = '';
+        document.getElementById('payouts').value = '';
+    }
+
+    function adminLogin() {
+        const username = document.getElementById('adminUsername').value;
+        const password = document.getElementById('adminPassword').value;
+
+        if (username === adminCredentials.username && password === adminCredentials.password) {
+            document.getElementById('adminSection').classList.remove('hidden');
+            document.getElementById('deleteMessage').innerText = '';
+        } else {
+            alert("Incorrect admin credentials.");
+        }
+    }
+
+    function deleteUser() {
+        const usernameToDelete = document.getElementById('deleteUsername').value;
+
+        if (users[usernameToDelete]) {
+            delete users[usernameToDelete];
+            displayUserData();
+            calculateOverallTotals();
+            document.getElementById('deleteMessage').innerText = `${usernameToDelete} deleted successfully.`;
+        } else {
+            document.getElementById('deleteMessage').innerText = "User not found.";
+        }
+
+        document.getElementById('deleteUsername').value = '';
+    }
+
+    function deleteUserData(username) {
+        if (loggedInUser === username) {
+            alert("You cannot delete your own data as a user.");
+            return;
+        }
+
+        delete users[username];
+        displayUserData();
+        calculateOverallTotals();
+    }
+</script>
+
+</body>
+</html>
