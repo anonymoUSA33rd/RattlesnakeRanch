@@ -5,24 +5,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Item Tracker</title>
     <script type="module">
-  // Import the functions you need from the SDKs you need
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.7.3/firebase-app.js";
-  // TODO: Add SDKs for Firebase products that you want to use
-  // https://firebase.google.com/docs/web/setup#available-libraries
+        // Import the functions you need from the SDKs you need
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.7.3/firebase-app.js";
+        import { getDatabase, ref, set, get, child } from "https://www.gstatic.com/firebasejs/11.7.3/firebase-database.js";
 
-  // Your web app's Firebase configuration
-  const firebaseConfig = {
-    apiKey: "AIzaSyDMJIJL_cQzlH_OMLuM3r5qPbHgD56ipXA",
-    authDomain: "rattlesnakeranch-84320.firebaseapp.com",
-    projectId: "rattlesnakeranch-84320",
-    storageBucket: "rattlesnakeranch-84320.firebasestorage.app",
-    messagingSenderId: "930466803214",
-    appId: "1:930466803214:web:5a211be891a64e7a14d65f"
-  };
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDMJIJL_cQzlH_OMLuM3r5qPbHgD56ipXA",
+            authDomain: "rattlesnakeranch-84320.firebaseapp.com",
+            projectId: "rattlesnakeranch-84320",
+            storageBucket: "rattlesnakeranch-84320.appspot.com",
+            messagingSenderId: "930466803214",
+            appId: "1:930466803214:web:5a211be891a64e7a14d65f"
+        };
 
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
-</script>
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
+    </script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -77,6 +77,7 @@
 
 <div id="dataSection" class="hidden">
     <h2>Add User Data</h2>
+    <input type="text" id="username" placeholder="User Name" required>
     <input type="number" id="eggs" placeholder="Eggs" required>
     <input type="number" id="milk" placeholder="Milk" required>
     <input type="number" id="livestock" placeholder="Livestock" required>
@@ -93,7 +94,6 @@
             <th>Milk</th>
             <th>Livestock</th>
             <th>Payouts</th>
-            <th>Action</th>
         </tr>
     </thead>
     <tbody id="userTbody">
@@ -117,7 +117,6 @@
 </div>
 
 <script>
-    let users = {};
     let loggedInUser = null;
     const adminCredentials = { username: 'admin', password: 'admin123' }; // Simple admin credentials
 
@@ -125,84 +124,66 @@
         const username = document.getElementById('loginUsername').value;
         const password = document.getElementById('loginPassword').value;
 
-        if (!users[username]) {
-            users[username] = { password, data: [] };
-            document.getElementById('loginMessage').innerText = "User created. Please log in.";
-            return;
+        // Create user if not exists
+        if (!loggedInUser) {
+            loggedInUser = username;
+            document.getElementById('loginMessage').innerText = "Logged in as " + username;
+            document.getElementById('loginSection').classList.add('hidden');
+            document.getElementById('dataSection').classList.remove('hidden');
+        } else {
+            document.getElementById('loginMessage').innerText = "Already logged in.";
         }
-
-        if (users[username].password !== password) {
-            document.getElementById('loginMessage').innerText = "Incorrect password.";
-            return;
-        }
-
-        loggedInUser = username;
-        document.getElementById('loginSection').classList.add('hidden');
-        document.getElementById('dataSection').classList.remove('hidden');
     }
 
-function addUserData() {
-    const username = document.getElementById('username').value;
-    const eggs = parseInt(document.getElementById('eggs').value) || 0;
-    const milk = parseInt(document.getElementById('milk').value) || 0;
-    const livestock = parseInt(document.getElementById('livestock').value) || 0;
-    const payouts = parseInt(document.getElementById('payouts').value) || 0;
+    function addUserData() {
+        const username = document.getElementById('username').value;
+        const eggs = parseInt(document.getElementById('eggs').value) || 0;
+        const milk = parseInt(document.getElementById('milk').value) || 0;
+        const livestock = parseInt(document.getElementById('livestock').value) || 0;
+        const payouts = parseInt(document.getElementById('payouts').value) || 0;
 
-    const userData = { eggs, milk, livestock, payouts };
+        const userData = { eggs, milk, livestock, payouts };
 
-    // Save to Firebase
-    database.ref('users/' + username).set(userData)
-        .then(() => {
-            displayUserData();
-            calculateOverallTotals();
-            clearInputs();
-        })
-        .catch(error => {
-            console.error("Error saving data: ", error);
-        });
-}
-
-
-function displayUserData() {
-    const tbody = document.getElementById('userTbody');
-    tbody.innerHTML = '';
-
-    // Fetch data from Firebase
-    database.ref('users').once('value').then(snapshot => {
-        snapshot.forEach(childSnapshot => {
-            const user = childSnapshot.key;
-            const data = childSnapshot.val();
-            const row = `<tr>
-                <td>${user}</td>
-                <td>${data.eggs}</td>
-                <td>${data.milk}</td>
-                <td>${data.livestock}</td>
-                <td>${data.payouts}</td>
-            </tr>`;
-            tbody.innerHTML += row;
-        });
-    });
-}
-    function calculateOverallTotals() {
-        const totals = Object.values(users).reduce((acc, user) => {
-            user.data.forEach(item => {
-                acc.eggs += item.eggs;
-                acc.milk += item.milk;
-                acc.livestock += item.livestock;
-                acc.payouts += item.payouts;
+        // Save to Firebase
+        set(ref(database, 'users/' + username), userData)
+            .then(() => {
+                displayUserData();
+                clearInputs();
+            })
+            .catch(error => {
+                console.error("Error saving data: ", error);
             });
-            return acc;
-        }, { eggs: 0, milk: 0, livestock: 0, payouts: 0 });
+    }
 
-        document.getElementById('overallTotals').innerHTML = `
-            Eggs: ${totals.eggs} <br>
-            Milk: ${totals.milk} <br>
-            Livestock: ${totals.livestock} <br>
-            Payouts: ${totals.payouts}
-        `;
+    function displayUserData() {
+        const tbody = document.getElementById('userTbody');
+        tbody.innerHTML = '';
+
+        // Fetch data from Firebase
+        get(child(ref(database), 'users')).then((snapshot) => {
+            if (snapshot.exists()) {
+                snapshot.forEach(childSnapshot => {
+                    const user = childSnapshot.key;
+                    const data = childSnapshot.val();
+                    const row = `<tr>
+                        <td>${user}</td>
+                        <td>${data.eggs}</td>
+                        <td>${data.milk}</td>
+                        <td>${data.livestock}</td>
+                        <td>${data.payouts}</td>
+                    </tr>`;
+                    tbody.innerHTML += row;
+                });
+            } else {
+                console.log("No data available");
+            }
+        }).catch(error => {
+            console.error("Error fetching data: ", error);
+        });
     }
 
     function clearInputs() {
+        document.getElementById('username').value = '';
         document.getElementById('eggs').value = '';
         document.getElementById('milk').value = '';
         document.getElementById('livestock').value = '';
@@ -224,28 +205,21 @@ function displayUserData() {
     function deleteUser() {
         const usernameToDelete = document.getElementById('deleteUsername').value;
 
-        if (users[usernameToDelete]) {
-            delete users[usernameToDelete];
-            displayUserData();
-            calculateOverallTotals();
-            document.getElementById('deleteMessage').innerText = `${usernameToDelete} deleted successfully.`;
-        } else {
-            document.getElementById('deleteMessage').innerText = "User not found.";
-        }
+        // Delete user data from Firebase
+        set(ref(database, 'users/' + usernameToDelete), null)
+            .then(() => {
+                document.getElementById('deleteMessage').innerText = `${usernameToDelete} deleted successfully.`;
+                displayUserData();
+            })
+            .catch(error => {
+                document.getElementById('deleteMessage').innerText = "Error deleting user.";
+                console.error("Error deleting user: ", error);
+            });
 
         document.getElementById('deleteUsername').value = '';
     }
 
-    function deleteUserData(username) {
-        if (loggedInUser === username) {
-            alert("You cannot delete your own data as a user.");
-            return;
-        }
-
-        delete users[username];
-        displayUserData();
-        calculateOverallTotals();
-    }
+    window.onload = displayUserData; // Load data on page load
 </script>
 
 </body>
