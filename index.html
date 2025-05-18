@@ -4,6 +4,25 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Item Tracker</title>
+    <script type="module">
+  // Import the functions you need from the SDKs you need
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.7.3/firebase-app.js";
+  // TODO: Add SDKs for Firebase products that you want to use
+  // https://firebase.google.com/docs/web/setup#available-libraries
+
+  // Your web app's Firebase configuration
+  const firebaseConfig = {
+    apiKey: "AIzaSyDMJIJL_cQzlH_OMLuM3r5qPbHgD56ipXA",
+    authDomain: "rattlesnakeranch-84320.firebaseapp.com",
+    projectId: "rattlesnakeranch-84320",
+    storageBucket: "rattlesnakeranch-84320.firebasestorage.app",
+    messagingSenderId: "930466803214",
+    appId: "1:930466803214:web:5a211be891a64e7a14d65f"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+</script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -122,45 +141,48 @@
         document.getElementById('dataSection').classList.remove('hidden');
     }
 
-    function addUserData() {
-        if (!loggedInUser) return;
+function addUserData() {
+    const username = document.getElementById('username').value;
+    const eggs = parseInt(document.getElementById('eggs').value) || 0;
+    const milk = parseInt(document.getElementById('milk').value) || 0;
+    const livestock = parseInt(document.getElementById('livestock').value) || 0;
+    const payouts = parseInt(document.getElementById('payouts').value) || 0;
 
-        const eggs = parseInt(document.getElementById('eggs').value) || 0;
-        const milk = parseInt(document.getElementById('milk').value) || 0;
-        const livestock = parseInt(document.getElementById('livestock').value) || 0;
-        const payouts = parseInt(document.getElementById('payouts').value) || 0;
+    const userData = { eggs, milk, livestock, payouts };
 
-        const userData = { eggs, milk, livestock, payouts };
-        users[loggedInUser].data.push(userData);
-        displayUserData();
-        calculateOverallTotals();
-        clearInputs();
-    }
+    // Save to Firebase
+    database.ref('users/' + username).set(userData)
+        .then(() => {
+            displayUserData();
+            calculateOverallTotals();
+            clearInputs();
+        })
+        .catch(error => {
+            console.error("Error saving data: ", error);
+        });
+}
 
-    function displayUserData() {
-        const tbody = document.getElementById('userTbody');
-        tbody.innerHTML = '';
-        for (const user in users) {
-            const total = users[user].data.reduce((acc, item) => {
-                acc.eggs += item.eggs;
-                acc.milk += item.milk;
-                acc.livestock += item.livestock;
-                acc.payouts += item.payouts;
-                return acc;
-            }, { eggs: 0, milk: 0, livestock: 0, payouts: 0 });
 
+function displayUserData() {
+    const tbody = document.getElementById('userTbody');
+    tbody.innerHTML = '';
+
+    // Fetch data from Firebase
+    database.ref('users').once('value').then(snapshot => {
+        snapshot.forEach(childSnapshot => {
+            const user = childSnapshot.key;
+            const data = childSnapshot.val();
             const row = `<tr>
                 <td>${user}</td>
-                <td>${total.eggs}</td>
-                <td>${total.milk}</td>
-                <td>${total.livestock}</td>
-                <td>${total.payouts}</td>
-                <td><button onclick="deleteUserData('${user}')">Delete</button></td>
+                <td>${data.eggs}</td>
+                <td>${data.milk}</td>
+                <td>${data.livestock}</td>
+                <td>${data.payouts}</td>
             </tr>`;
             tbody.innerHTML += row;
-        }
-    }
-
+        });
+    });
+}
     function calculateOverallTotals() {
         const totals = Object.values(users).reduce((acc, user) => {
             user.data.forEach(item => {
